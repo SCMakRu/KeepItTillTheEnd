@@ -1,0 +1,41 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace FakeItTillYouMakeIt
+{
+   public class VortexDocs
+    {
+       public List<Vortex> vortexes;
+
+       public VortexDocs()
+       {
+           vortexes = new List<Vortex>();
+       }
+
+       public void DrawVortex(Graphics g, int width, int height)
+       {
+           foreach (Vortex v in vortexes)
+           {
+               v.DrawImage(g, width, height);
+           }
+       }
+
+       public void AddVortex(int x, int y)
+       {
+               Vortex v = new Vortex(x, y);
+               vortexes.Add(v);        
+       }
+
+       public void VortexesAlive()
+       {
+           for (int i = 0; i < vortexes.Count; i++)
+           {
+               vortexes[i].alive++;
+           }
+       }
+    }
+}
