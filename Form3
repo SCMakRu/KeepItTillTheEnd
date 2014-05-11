@@ -1,0 +1,441 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Media;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace FakeItTillYouMakeIt
+{
+    public partial class Form3 : Form
+    {
+        public MovingBackground mBG;
+        public MovingBackground mBG0;
+        public Rectangle gameRec;
+        public Robot robot;
+        public End end;
+        public Vortex vortex;
+        public Coin coin;
+        public Weapon weapon;
+        public CoinsDoc coins;
+        public CoinsGroup coinsGroup;
+        public VortexDocs vortexDocs;
+        public int X, Y, cX, cY, vX, vY, wX, wY;
+        public int countCoins, countVortexes;
+       // public int lifetimeVortex, lifetimeCoin;
+        public List<int> lifetimeVortex;
+        public List<int> lifetimeCoin;
+        Bitmap doubleBuffer;
+        Graphics graphics;
+        Random random = new Random();
+        public Form4 form4;
+        public int coinsNo;
+        public int vortexNo;
+        public int power;
+        public int coinsMissed;
+        public int weaponCount;
+        public int vortexesDestroyed;
+        public int vortexesPresent;
+        public int coinsPresent;
+        
+        SoundPlayer sound1;
+        SoundPlayer sound2;
+      
+        public Form3()
+        {
+            InitializeComponent();
+            newGame();
+            graphics = CreateGraphics();
+            DoubleBuffered = true;
+        }
+
+        public void newGame()
+        {
+            sound1 = new SoundPlayer(Properties.Resources.WhatMagicIsthis);
+            sound2 = new SoundPlayer(Properties.Resources.YouAreOneOfTheGoodOnes);
+            vortexesPresent = 0;
+            coinsPresent = 0;
+            random = new Random();
+            X = Width-200;
+            Y = Height - Height / 3 - 45;
+            robot = new Robot(X, Y);
+            weapon = new Weapon(wX,wY);
+            vortex = new Vortex(vX, vY);
+            coin = new Coin(cX,cY);
+            end = new End(50, Height/2-Height/4);
+            cX = random.Next(Width - 100);
+            cY = random.Next(Height - 70);
+            vX = random.Next(Width - 100);
+            vY = random.Next(Height - 70);
+            wX = X + robot.robotImg.Height / 2;
+            wY = Y+ robot.robotImg.Height / 2;
+            coins = new CoinsDoc();
+            coinsGroup = new CoinsGroup();
+            vortexDocs = new VortexDocs();
+            doubleBuffer = new Bitmap(Width, Height);
+            countCoins = 0;
+            countVortexes = 0;
+            mBG = new MovingBackground(-1080);
+            timerBGMove.Start();
+            timerCoins.Start();
+            pbPower.Maximum = 4;
+            gameRec = new Rectangle(0,0, Width-103, Height-100);
+            pbPower.Value = 4;
+            power = 4;
+            coinsNo = 0;
+            vortexNo = 0;
+            coinsMissed = 0;
+            weaponCount = 4;
+            RobotCoinCollision();
+            RobotVortexCollision();
+            lblCoins.Text = "#coins: " + coinsGroup.NumCoins.ToString();
+            lblCoinsMissed.Text = "missed: " + coinsMissed;
+            lblVortex.Text = "#vortexes" + "\n" + "missed: " + vortexNo;
+            lblPBPower.Text = "power: " + (power * 25) + "%";
+            vortexesDestroyed = 0;
+            lifetimeVortex = new List<int>();
+            lifetimeCoin = new List<int>();
+            Vortex.Bounds = gameRec;
+            Coin.Bounds = gameRec;            
+        }
+
+        private void Form3_Paint(object sender, PaintEventArgs e)
+        {
+            e.Graphics.Clear(Color.White);
+            mBG.Draw(e.Graphics);
+            robot.DrawRobot(e.Graphics);
+
+            if (vreme >= 350)
+            {
+                end.DrawEND(e.Graphics);
+            }
+            tsslWH.Text = String.Format("W: {0} H: {1} ", Width, Height);          
+        }
+        int vreme = 0;
+        private void timerBGMove_Tick(object sender, EventArgs e)
+        {
+   //        Graphics g = Graphics.FromImage(doubleBuffer);
+           mBG.BGMove();
+           RobotCoinCollision();
+           RobotVortexCollision();
+           
+            vreme++;
+
+           lblVreme.Text = string.Format("{0}", vreme);
+          
+           ENDRobotCollission();
+           Invalidate();
+ //          graphics.DrawImageUnscaled(doubleBuffer, 0, 0);            
+        }
+
+        public void ENDRobotCollission()
+        {
+                Pen pen = new Pen(Color.Green);
+                Rectangle endRec = new Rectangle(end.X, end.Y, end.endImg.Width/2+10, end.endImg.Height/2-20);
+               // graphics.DrawRectangle(pen, endRec);
+                Rectangle robotRec = new Rectangle(robot.X, robot.Y, 70, 100);//moze 105 za celosno od nozete
+              //  graphics.DrawRectangle(pen, robotRec);
+
+                if (vreme >= 350)
+                {
+                    if (endRec.IntersectsWith(robotRec))
+                    {
+                        timerBGMove.Stop();
+                        timerCoins.Stop();
+                        sound2.Play();
+                        if (coinsNo <= 5)
+                        {
+                            if (MessageBox.Show("You paseed this level and you earned " + coinsNo + " coins. Congratulations!",
+                          "Well done!", MessageBoxButtons.OKCancel,
+                           MessageBoxIcon.None) == System.Windows.Forms.DialogResult.OK)
+                            {
+                                Close();
+                            }
+                            else
+                            {
+                                Close();
+                            }
+                        }
+                        else if (coinsNo > 5 && coinsNo <= 10)
+                        {
+                            if (MessageBox.Show("Well done! You paseed this level and you earned " + coinsNo + " coins. Congratulations!",
+                          "Well done!", MessageBoxButtons.OKCancel,
+                           MessageBoxIcon.None) == System.Windows.Forms.DialogResult.OK)
+                            {
+                                Close();
+                            }
+                            else
+                            {
+                                Close();
+                            }
+                        }
+                        else
+                        {
+                            if (MessageBox.Show("You are amazing! You paseed this level and you earned " + coinsNo + " coins. Congratulations!",
+                         "Well done!", MessageBoxButtons.OKCancel,
+                          MessageBoxIcon.None) == System.Windows.Forms.DialogResult.OK)
+                            {
+                                Close();
+                            }
+                            else
+                            {
+                                Close();
+                            }
+                        }
+                    }
+                }
+        }
+
+        private void Form3_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Down)
+            {
+                robot.ChangeDirection(Robot.DIRECTION.DOWN);
+                robot.MoveRobot(Width, Height);
+            }
+            if (e.KeyCode == Keys.Up)
+            {
+                robot.ChangeDirection(Robot.DIRECTION.UP);
+                robot.MoveRobot(Width, Height);
+            }
+            if (e.KeyCode == Keys.Left)
+            {
+                robot.ChangeDirection(Robot.DIRECTION.LEFT);
+                robot.MoveRobot(Width, Height);
+            }
+            if (e.KeyCode == Keys.Right)
+            {
+                robot.ChangeDirection(Robot.DIRECTION.RIGHT);
+                robot.MoveRobot(Width, Height);
+            }
+         
+        }
+
+        private void timerCoins_Tick(object sender, EventArgs e)
+        {
+         //  Graphics g = Graphics.FromImage(doubleBuffer);
+            Rectangle robotRec = new Rectangle(robot.X, robot.Y, 70, 100);//moze 105 za celosno od nozete
+            Rectangle coinRec;
+            if (countCoins % 20 == 0)
+            {
+                cX = random.Next(Width - 100);
+                cY = random.Next(Height - 70);
+                coinRec = new Rectangle(cX, cY, coin.coinImg.Width, coin.coinImg.Height);
+                if (!coinRec.IntersectsWith(robotRec))
+                coins.AddCoin(cX, cY);
+             
+            }
+            Rectangle vortexRec;
+            if (countVortexes % 30 == 0)
+            {
+                vX = random.Next(Width - 100);
+                vY = random.Next(Height - 70);
+                vortexRec = new Rectangle(vX, vY, vortex.vortexImg.Width, vortex.vortexImg.Height);
+                if(!vortexRec.IntersectsWith(robotRec))
+                vortexDocs.AddVortex(vX, vY);
+                toolStripStatusLabel1.Text = String.Format("W:{0} H: {1}", vortex.vortexImg.Width, vortex.vortexImg.Height);
+            }
+
+            countVortexes++;
+            countCoins++;
+
+            coins.Draw(graphics, Width, Height);
+            coins.CoinsAlive();
+
+            
+            vortexDocs.DrawVortex(graphics, Width, Height);
+            vortexDocs.VortexesAlive();
+
+            timeoutCoin();
+            timeoutVortex();
+          
+ //           graphics.DrawImageUnscaled(doubleBuffer, 0, 0);                
+        }
+
+        public void RobotCoinCollision()
+        {
+            for (int i = 0; i < coins.coins.Count; i++)
+            {
+                Pen pen = new Pen(Color.Green);
+                Rectangle coinRec = new Rectangle(coins.coins[i].X, coins.coins[i].Y, coins.coins[i].coinImg.Width, coins.coins[i].coinImg.Height);
+   //             graphics.DrawRectangle(pen, coinRec);
+                Rectangle robotRec = new Rectangle(robot.X, robot.Y, 70, 100);//moze 105 za celosno od nozete
+   //             graphics.DrawRectangle(pen, robotRec);
+
+                if (coinRec.IntersectsWith(robotRec))
+                {
+                    coins.coins.Remove(coins.coins[i]);
+                  
+                    coinsNo++;
+                    if (coinsNo <= 20)
+                    {
+                        coinsGroup.AddOne();
+                    }
+                    tsslNoOfCoins.Text = "#coins: " + coinsGroup.NumCoins.ToString();
+                    lblCoins.Text = "#coins: " + coinsGroup.NumCoins.ToString();
+                   
+                }
+            //    Invalidate(true);
+
+            }
+        }
+
+        public void RobotVortexCollision()
+        {
+            for (int i = 0; i < vortexDocs.vortexes.Count; i++)
+            {
+                Pen pen = new Pen(Color.Green);
+                Rectangle vortexRec = new Rectangle(vortexDocs.vortexes[i].X, vortexDocs.vortexes[i].Y, vortexDocs.vortexes[i].vortexImg.Width, vortexDocs.vortexes[i].vortexImg.Height);
+    //            graphics.DrawRectangle(pen, vortexRec);
+                Rectangle robotRec = new Rectangle(robot.X, robot.Y, 70, 100);//moze 105 za celosno od nozete
+    //            graphics.DrawRectangle(pen, robotRec);
+
+                if (vortexRec.IntersectsWith(robotRec))
+                {
+                    vortexDocs.vortexes.Remove(vortexDocs.vortexes[i]);
+                    power--;
+                    if (power < 0)
+                    {
+                        timerBGMove.Stop();
+                        timerCoins.Stop();
+                        if (MessageBox.Show("Oh well! You were doing fine, however you weren't fully concentrated and accurate"
+                            +"You've lost this game, you didn't accomplish your mission as you didn't manage to find the exit..."
+                            +"But don't worry, you can still try to find the exit in the next game.", "The end", MessageBoxButtons.OKCancel,
+                  MessageBoxIcon.None) == System.Windows.Forms.DialogResult.OK)
+                        {
+                            Close();
+                        }
+                        else
+                        {
+                            Close();
+                        }
+                    }
+                    lblPBPower.Text = "power: " + power * 25 + "%";
+                    pbPower.Value = power;
+                    // vortexNo++;
+                    //lblVortex.Text = "#vortex: " + coinsGroup.NumCoins.ToString();
+
+
+                }
+              //  Invalidate(true);
+
+            }
+        }
+
+        public void timeoutVortex()
+        {
+            for (int i = vortexDocs.vortexes.Count-1; i >= 0;--i)
+            {
+                if (vortexDocs.vortexes[i].alive == 22)
+                {
+                    vortexDocs.vortexes.RemoveAt(i);
+                  //  lifetimeVortex[i] = 0;
+                    vortexNo++;
+                    lblVortex.Text="#vortexes" +"\n" +"missed: " +vortexNo;
+                }
+            }
+        }
+
+
+        public void timeoutCoin()
+        {
+            for (int i = coins.coins.Count-1; i >= 0; --i)
+            {
+                if (coins.coins[i].alive==38)
+                {
+                    coins.coins.RemoveAt(i);
+                   // lifetimeCoin[i] = 0;
+                    coinsMissed++;
+                    lblCoinsMissed.Text = "missed: " + coinsMissed;
+                }
+            }
+        }
+
+        private void pbPower_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void panelInfo_Paint(object sender, PaintEventArgs e)
+        {
+            SolidBrush gold = new SolidBrush(Color.Gold);
+            Pen pn = new Pen(Color.Black, 2);
+            Point p1,p3, p4, p2;           
+
+            Graphics canvas = panelInfo.CreateGraphics();
+            canvas.Clear(Color.White);
+            for (int i = 0; i < coinsGroup.NumCoins; i++)
+            {
+                int y = panelInfo.Size.Height - 50 - 10 * i;
+                canvas.FillEllipse(gold, 10, y, 55, 15);
+                canvas.FillEllipse(gold, 10, y - 7, 55, 15);
+                canvas.FillRectangle(gold, 10, y-2, 55,10);
+                p1 = new Point(10, y+7);
+                p2 = new Point(10, y);
+                canvas.DrawLine(pn, p1, p2);
+                p3 = new Point(70,y+7);
+                p4 = new Point(70,y);
+                canvas.DrawLine(pn, p4, p3);
+            //    canvas.DrawRectangle(pn, 10, y - 2, 70, 10);
+                canvas.DrawEllipse(pn, 10, y, 55, 15);
+                canvas.DrawEllipse(pn, 10, y - 7, 55, 15);
+            }
+            pn.Dispose();
+            gold.Dispose();
+        }
+
+       
+
+        private void Form3_ResizeEnd(object sender, EventArgs e)
+        {
+            Invalidate(true);
+        }
+
+        private void Form3_MouseClick(object sender, MouseEventArgs e)
+        {
+            Pen pen = new Pen(Color.Green);
+            Point p = new Point(e.X, e.Y);
+            wX = e.X;
+            wY = e.Y;
+            Rectangle weaponRec = new Rectangle(p.X, p.Y, weapon.weaponImg.Width, weapon.weaponImg.Height);
+            weapon.X = wX;
+            weapon.Y = wY;
+            if (weaponCount == 4)
+            {
+                sound1.Play();
+            }
+            weaponCount--;
+
+            if (weaponCount <= 4 && weaponCount>=0)
+            {
+                weapon.DrawWeapon(graphics);
+
+                for (int i = 0; i < vortexDocs.vortexes.Count; i++)
+                {
+                    Rectangle vortexRec = new Rectangle(vortexDocs.vortexes[i].X, vortexDocs.vortexes[i].Y, vortexDocs.vortexes[i].vortexImg.Width, vortexDocs.vortexes[i].vortexImg.Height);
+                   
+                    if (vortexRec.IntersectsWith(weaponRec))
+                    {
+                        vortexDocs.vortexes.Remove(vortexDocs.vortexes[i]);
+                        vortexesDestroyed++;
+                        tsslWeapon.Text = String.Format("#weapons left: {0} vortexes destroyed: {1}", weaponCount, vortexesDestroyed);
+
+                        Invalidate(true);
+                    }
+                    else
+                    {
+                        tsslWeapon.Text = String.Format("#weapons left: {0} vortexes destroyed: {1}", weaponCount, vortexesDestroyed);
+                    }
+                }
+            }
+            else
+            {
+                tsslWeapon.Text = String.Format("#No more weapons left");
+            }
+        }           
+    }
+}
